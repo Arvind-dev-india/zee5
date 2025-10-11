@@ -9,7 +9,33 @@
 
 ## 🎯 How to Use
 
-### 🅰️ Download PHP Web Server
+### 🐳 Docker Setup (Recommended - Works on Linux/Windows/Mac)
+
+**No installation required! Just Docker.**
+
+1. **Quick Start:**
+   ```bash
+   ./start.sh
+   ```
+
+2. **Manual Docker Commands:**
+   ```bash
+   docker-compose up -d
+   ```
+
+3. **Access the service:**
+   - **Homepage**: `http://localhost:5052/` (Channel list with cookie status)
+   - **M3U Playlist**: `http://localhost:5052/playlist.php`
+   - **From other devices**: Replace `localhost` with your computer's IP
+
+4. **Stop the service:**
+   ```bash
+   ./stop.sh
+   # or
+   docker-compose down
+   ```
+
+### 🅰️ Traditional Setup (Manual Installation)
 
 1. **For Mobiles** → KSWEB PRO v3.987
    ```
@@ -43,11 +69,24 @@
 
 ## ▶️ How to Access M3U Playlist
 
+### 🐳 **Docker Users (Recommended)**
 In VLC, Tivimate or OTT Navigator, use this URL format:
+```
+http://localhost:5052/playlist.php
+```
 
+### 🌐 **From Network Devices**
+Replace `localhost` with your computer's IP address:
 ```
-http://localhost:8080/zee5/playlist.php
+http://YOUR_IP_ADDRESS:5052/playlist.php
 ```
+
+### 📱 **Enhanced Homepage**
+Visit `http://localhost:5052/` for:
+- 🎬 **Channel Grid**: Visual display of all channels
+- ⏰ **Cookie Status**: Real-time authentication expiry
+- 🔗 **One-Click URLs**: Easy copy-paste for VLC
+- 📺 **Direct Streaming**: Click to stream any channel
 
 🎉 **Hurray!** Now Play & Enjoy ZEE5 Channels!
 

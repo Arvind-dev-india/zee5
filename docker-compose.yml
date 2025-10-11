@@ -1,0 +1,18 @@
+services:
+  zee5-app:
+    build: .
+    container_name: zee5-streaming
+    ports:
+      - "5052:80"
+    volumes:
+      - ./:/var/www/html
+      - ./tmp:/var/www/html/tmp
+    environment:
+      - APACHE_DOCUMENT_ROOT=/var/www/html
+    restart: unless-stopped
+    networks:
+      - zee5-network
+
+networks:
+  zee5-network:
+    driver: bridge
