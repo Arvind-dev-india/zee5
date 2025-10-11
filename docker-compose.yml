@@ -3,7 +3,7 @@ services:
     build: .
     container_name: zee5-streaming
     ports:
-      - "5052:80"
+      - "0.0.0.0:5052:80"  # Bind to all interfaces
     volumes:
       - ./:/var/www/html
       - ./tmp:/var/www/html/tmp
