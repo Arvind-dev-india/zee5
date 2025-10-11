@@ -72,11 +72,29 @@ $cookie = getCookieZee5($userAgent);
 
 if (!$cookie) {
     http_response_code(500);
-    die('Unable to generate authentication cookie. The service may be temporarily unavailable.');
+    die('Unable to generate authentication cookie. The service may be temporarily unavailable or geo-blocked.');
 }
 
-// Redirect to the streaming URL with authentication
-header("Location: $initialUrl?$cookie", true, 302);
+// Clean up the URL format to avoid VLC issues
+$finalUrl = $initialUrl . '?' . $cookie;
+
+// For VLC and other players, return the URL directly or redirect
+$acceptHeader = $_SERVER['HTTP_ACCEPT'] ?? '';
+$userAgentLower = strtolower($userAgent);
+
+// If it's a media player or API request, return URL as text
+if (strpos($userAgentLower, 'vlc') !== false || 
+    strpos($userAgentLower, 'mplayer') !== false ||
+    strpos($acceptHeader, 'application/json') !== false ||
+    isset($_GET['format']) && $_GET['format'] === 'url') {
+    
+    header('Content-Type: text/plain');
+    echo $finalUrl;
+    exit;
+}
+
+// For browsers, redirect to the streaming URL
+header("Location: " . $finalUrl, true, 302);
 exit;
 
 //@yuvraj824

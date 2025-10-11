@@ -9,6 +9,8 @@ services:
       - ./tmp:/var/www/html/tmp
     environment:
       - APACHE_DOCUMENT_ROOT=/var/www/html
+      - SERVER_HOST=${SERVER_HOST:-localhost}
+      - SERVER_PORT=${SERVER_PORT:-5052}
     restart: unless-stopped
     networks:
       - zee5-network

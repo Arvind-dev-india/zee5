@@ -4,6 +4,7 @@
 // Join Community https://t.me/ygxworld, https://t.me/ygx_chat
 //=============================================================================//
 include_once '_functions.php';
+include_once 'get-server-info.php';
 
 function getCookieExpiry($userAgent) {
     $UAhash = md5($userAgent);
@@ -31,9 +32,21 @@ $userAgent = $_SERVER['HTTP_USER_AGENT'] ?? "Mozilla/5.0";
 $cookieInfo = getCookieExpiry($userAgent);
 
 // Get server info
-$protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' || $_SERVER['SERVER_PORT'] == 443) ? "https://" : "http://";
-$host = $_SERVER['HTTP_HOST'];
-$baseUrl = $protocol . $host;
+$serverInfo = getServerInfo();
+$baseUrl = $serverInfo['base_url'];
+
+// Handle search
+$searchQuery = $_GET['search'] ?? '';
+$filteredChannels = $data['data'];
+
+if ($searchQuery) {
+    $filteredChannels = array_filter($data['data'], function($channel) use ($searchQuery) {
+        return stripos($channel['name'], $searchQuery) !== false ||
+               stripos($channel['genre'], $searchQuery) !== false ||
+               stripos($channel['language'], $searchQuery) !== false ||
+               stripos($channel['id'], $searchQuery) !== false;
+    });
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -80,6 +93,42 @@ $baseUrl = $protocol . $host;
             font-size: 1.1em;
         }
         
+        .server-info {
+            background: #e3f2fd;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+            text-align: center;
+            border-left: 5px solid #2196f3;
+        }
+        
+        .search-container {
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        
+        .search-box {
+            width: 100%;
+            max-width: 500px;
+            padding: 15px 20px;
+            font-size: 1.1em;
+            border: 2px solid #ddd;
+            border-radius: 25px;
+            outline: none;
+            transition: all 0.3s ease;
+        }
+        
+        .search-box:focus {
+            border-color: #007bff;
+            box-shadow: 0 0 10px rgba(0, 123, 255, 0.3);
+        }
+        
+        .search-results {
+            margin-top: 10px;
+            color: #666;
+            font-size: 0.9em;
+        }
+        
         .cookie-status {
             background: #f8f9fa;
             border-radius: 10px;
@@ -119,6 +168,8 @@ $baseUrl = $protocol . $host;
             border-radius: 25px;
             font-weight: bold;
             transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
         }
         
         .btn-primary {
@@ -209,6 +260,7 @@ $baseUrl = $protocol . $host;
             justify-content: space-around;
             margin-bottom: 30px;
             text-align: center;
+            flex-wrap: wrap;
         }
         
         .stat-item {
@@ -217,6 +269,7 @@ $baseUrl = $protocol . $host;
             border-radius: 10px;
             box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
             min-width: 150px;
+            margin: 5px;
         }
         
         .stat-number {
@@ -264,6 +317,16 @@ $baseUrl = $protocol . $host;
             font-size: 0.9em;
             border: 1px solid #e9ecef;
         }
+        
+        .no-results {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+        
+        .no-results h3 {
+            margin-bottom: 10px;
+        }
     </style>
 </head>
 <body>
@@ -275,6 +338,29 @@ $baseUrl = $protocol . $host;
                 <a href="/debug-stream.php" style="color: #007bff;">🔧 Debug Tools</a> | 
                 <a href="/STREAMING-TROUBLESHOOTING.md" style="color: #007bff;">📖 Troubleshooting Guide</a>
             </p>
+        </div>
+        
+        <div class="server-info">
+            <h3>🌐 Server Configuration</h3>
+            <p><strong>Base URL:</strong> <?php echo htmlspecialchars($baseUrl); ?></p>
+            <p><strong>Network Access:</strong> Replace localhost with your server IP for network access</p>
+        </div>
+        
+        <div class="search-container">
+            <form method="GET" style="display: inline-block; width: 100%;">
+                <input type="text" name="search" class="search-box" 
+                       placeholder="🔍 Search channels by name, genre, or language..." 
+                       value="<?php echo htmlspecialchars($searchQuery); ?>"
+                       onkeyup="liveSearch(this.value)">
+            </form>
+            <div class="search-results" id="searchResults">
+                <?php if ($searchQuery): ?>
+                    Found <?php echo count($filteredChannels); ?> channel(s) matching "<?php echo htmlspecialchars($searchQuery); ?>"
+                    <a href="/" style="margin-left: 10px; color: #007bff;">Clear Search</a>
+                <?php else: ?>
+                    Showing all <?php echo count($data['data']); ?> channels
+                <?php endif; ?>
+            </div>
         </div>
         
         <div class="cookie-status <?php echo $cookieInfo['exists'] && $cookieInfo['is_expired'] ? 'expired' : ''; ?>">
@@ -296,8 +382,8 @@ $baseUrl = $protocol . $host;
         
         <div class="stats">
             <div class="stat-item">
-                <div class="stat-number"><?php echo count($data['data']); ?></div>
-                <div class="stat-label">Total Channels</div>
+                <div class="stat-number"><?php echo count($filteredChannels); ?></div>
+                <div class="stat-label"><?php echo $searchQuery ? 'Filtered' : 'Total'; ?> Channels</div>
             </div>
             <div class="stat-item">
                 <div class="stat-number">HD</div>
@@ -321,40 +407,49 @@ $baseUrl = $protocol . $host;
             </p>
         </div>
         
-        <h2 style="text-align: center; margin-bottom: 20px; color: #333;">Available Channels</h2>
+        <h2 style="text-align: center; margin-bottom: 20px; color: #333;">
+            <?php echo $searchQuery ? 'Search Results' : 'Available Channels'; ?>
+        </h2>
         
-        <div class="channels-grid">
-            <?php foreach ($data['data'] as $channel): ?>
-            <div class="channel-card">
-                <div class="channel-header">
-                    <h4><?php echo htmlspecialchars($channel['name']); ?></h4>
-                    <small>CH <?php echo htmlspecialchars($channel['chno']); ?></small>
-                </div>
-                <div class="channel-info">
-                    <div class="channel-meta">
-                        <span><strong>Language:</strong> <?php echo strtoupper($channel['language']); ?></span>
-                        <span><strong>Genre:</strong> <?php echo htmlspecialchars($channel['genre']); ?></span>
-                    </div>
-                    <div class="channel-actions">
-                        <a href="<?php echo $baseUrl; ?>/stream.php?id=<?php echo urlencode($channel['id']); ?>" 
-                           class="btn btn-primary btn-sm" target="_blank">
-                            🎬 Stream Now
-                        </a>
-                        <button class="btn btn-success btn-sm" 
-                                onclick="showM3U8('<?php echo htmlspecialchars($channel['name']); ?>', '<?php echo htmlspecialchars($channel['id']); ?>')">
-                            📱 Get M3U8
-                        </button>
-                    </div>
-                </div>
+        <?php if (empty($filteredChannels)): ?>
+            <div class="no-results">
+                <h3>😅 No channels found</h3>
+                <p>Try a different search term or <a href="/">view all channels</a></p>
             </div>
-            <?php endforeach; ?>
-        </div>
+        <?php else: ?>
+            <div class="channels-grid">
+                <?php foreach ($filteredChannels as $channel): ?>
+                <div class="channel-card">
+                    <div class="channel-header">
+                        <h4><?php echo htmlspecialchars($channel['name']); ?></h4>
+                        <small>CH <?php echo htmlspecialchars($channel['chno']); ?></small>
+                    </div>
+                    <div class="channel-info">
+                        <div class="channel-meta">
+                            <span><strong>Language:</strong> <?php echo strtoupper($channel['language']); ?></span>
+                            <span><strong>Genre:</strong> <?php echo htmlspecialchars($channel['genre']); ?></span>
+                        </div>
+                        <div class="channel-actions">
+                            <a href="<?php echo $baseUrl; ?>/stream.php?id=<?php echo urlencode($channel['id']); ?>" 
+                               class="btn btn-primary btn-sm" target="_blank">
+                                🎬 Stream Now
+                            </a>
+                            <button class="btn btn-success btn-sm" 
+                                    onclick="showM3U8('<?php echo htmlspecialchars($channel['name']); ?>', '<?php echo htmlspecialchars($channel['id']); ?>')">
+                                📱 Get M3U8
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <?php endforeach; ?>
+            </div>
+        <?php endif; ?>
         
         <div class="footer">
             <p>🎯 For Educational Purposes Only • ❤️ Open Source • 🌟 Free Forever</p>
             <p style="margin-top: 10px;">
                 <strong>Developers:</strong> <?php echo htmlspecialchars($data['developers']); ?> •
-                <strong>Total Channels:</strong> <?php echo count($data['data']); ?>
+                <strong>Server:</strong> <?php echo htmlspecialchars($serverInfo['host'] . ':' . $serverInfo['port']); ?>
             </p>
         </div>
     </div>
@@ -379,6 +474,7 @@ $baseUrl = $protocol . $host;
 
     <script>
         let currentM3U8Url = '';
+        let searchTimeout;
         
         function copyToClipboard(text) {
             navigator.clipboard.writeText(text).then(function() {
@@ -431,12 +527,26 @@ $baseUrl = $protocol . $host;
             document.getElementById('m3u8Modal').style.display = 'none';
         }
         
+        function liveSearch(query) {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                if (query.length > 0) {
+                    window.location.href = '/?search=' + encodeURIComponent(query);
+                }
+            }, 1000);
+        }
+        
         // Close modal when clicking outside
         document.getElementById('m3u8Modal').addEventListener('click', function(e) {
             if (e.target === this) {
                 closeModal();
             }
         });
+        
+        // Auto-focus search box if coming from search
+        <?php if ($searchQuery): ?>
+        document.querySelector('.search-box').focus();
+        <?php endif; ?>
     </script>
 </body>
 </html>

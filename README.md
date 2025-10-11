@@ -47,6 +47,16 @@
    https://www.apachefriends.org/download.html
    ```
 
+1. **For Mobiles** → KSWEB PRO v3.987
+   ```
+   https://tsneh.vercel.app/ksweb_3.987.apk
+   ```
+
+2. **For PC (Windows)** → XAMPP
+   ```
+   https://www.apachefriends.org/download.html
+   ```
+
 ### 🅱️ Download and Setup Script
 
 1. Download the [Script Zip File](https://github.com/yuvraj824/zee5/archive/refs/heads/main.zip)
