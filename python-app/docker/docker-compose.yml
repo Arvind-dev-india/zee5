@@ -7,33 +7,32 @@ services:
     container_name: zee5-redis
     restart: unless-stopped
     ports:
+      # Bind to localhost only (not exposed to network for security)
       - "127.0.0.1:6379:6379"
     volumes:
       - redis-data:/data
     command: redis-server --appendonly yes
-    networks:
-      - zee5-network
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
 
-  # ZEE5 Streaming Service (Python FastAPI)
+  # ZEE5 Streaming Service
   zee5-app:
     build:
-      context: ./python-app
+      context: ..
       dockerfile: docker/Dockerfile
     container_name: zee5-streaming
     restart: unless-stopped
     ports:
-      # Accessible from all network interfaces
+      # Bind to all network interfaces (accessible from any host)
       - "0.0.0.0:5052:5052"
     environment:
       - HOST=0.0.0.0
       - PORT=5052
-      # Set your server IP here for network access
-      # Example: SERVER_URL=http://192.168.1.16:5052
+      # Set SERVER_URL to your actual IP for network access
+      # Example: SERVER_URL=http://192.168.1.100:5052
       - SERVER_URL=${SERVER_URL:-http://0.0.0.0:5052}
       - REDIS_HOST=redis
       - REDIS_PORT=6379
@@ -41,19 +40,13 @@ services:
       - DEBUG=${DEBUG:-false}
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
       - COOKIE_POOL_SIZE=${COOKIE_POOL_SIZE:-3}
-      - COOKIE_REFRESH_INTERVAL=${COOKIE_REFRESH_INTERVAL:-36000}
-      - COOKIE_MIN_REMAINING=${COOKIE_MIN_REMAINING:-3600}
       - PLAYWRIGHT_HEADLESS=true
-      - PLAYWRIGHT_TIMEOUT=60000
-      - ENABLE_DEBUG_ROUTES=true
     depends_on:
       redis:
         condition: service_healthy
     volumes:
-      - ./python-app/data:/app/data
-      - cache-data:/app/data/cache
-    networks:
-      - zee5-network
+      - ./data/cache:/app/data/cache
+      - ./data/channels.json:/app/data/channels.json
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:5052/health"]
       interval: 30s
@@ -64,9 +57,7 @@ services:
 volumes:
   redis-data:
     driver: local
-  cache-data:
-    driver: local
 
 networks:
-  zee5-network:
-    driver: bridge
+  default:
+    name: zee5-network

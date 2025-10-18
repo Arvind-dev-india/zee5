@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(docker logs zee5-service --tail 50)",
+      "Bash(curl -s http://localhost:5052/health)",
+      "Bash(curl -s http://localhost:5052/cookie/status)",
+      "Bash(curl -s \"http://localhost:5052/get-stream-url?id=0-9-aajtak\")",
+      "Bash(curl -s -I \"http://localhost:5052/stream?id=0-9-aajtak\")",
+      "Bash(curl -s -L \"http://localhost:5052/stream?id=0-9-aajtak&format=url\")",
+      "Bash(curl -s \"http://192.168.1.16:5052/playlist.m3u\")",
+      "Bash(docker-compose down)",
+      "Bash(docker compose down)",
+      "Bash(docker compose up -d --build)",
+      "Bash(docker logs zee5-streaming --tail 100)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

@@ -1,17 +1,28 @@
 #!/bin/bash
-# ZEE5 Docker Stop Script
+
+# ZEE5 Streaming Service - Stop Script
 
 echo "🛑 Stopping ZEE5 Streaming Service..."
+echo ""
 
-# Use docker-compose or docker compose
-COMPOSE_CMD="docker-compose"
-if ! command -v docker-compose &> /dev/null; then
-    COMPOSE_CMD="docker compose"
+# Detect Docker Compose command (v1 or v2)
+DOCKER_COMPOSE_CMD=""
+if command -v docker-compose &> /dev/null; then
+    DOCKER_COMPOSE_CMD="docker-compose"
+elif docker compose version &> /dev/null; then
+    DOCKER_COMPOSE_CMD="docker compose"
+else
+    echo "❌ Docker Compose is not installed."
+    exit 1
 fi
 
-# Stop and remove containers
-$COMPOSE_CMD down
+$DOCKER_COMPOSE_CMD down
 
-echo "✅ ZEE5 Streaming Service stopped."
 echo ""
-echo "🚀 To start again, run: ./start.sh"
+echo "✅ Service stopped successfully!"
+echo ""
+echo "💡 Commands:"
+echo "   Start again:        ./start.sh"
+echo "   Remove all data:    $DOCKER_COMPOSE_CMD down -v"
+echo "   Remove images too:  $DOCKER_COMPOSE_CMD down -v --rmi all"
+echo ""

@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ZEE5 Streaming - Debug Tools</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #434343 0%, #000000 100%);
+            color: #fff;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: rgba(30, 30, 30, 0.95);
+            border-radius: 15px;
+            padding: 30px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #444;
+        }
+
+        h1 { color: #4CAF50; margin-bottom: 10px; }
+
+        .section {
+            background: rgba(50, 50, 50, 0.5);
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .section h2 {
+            color: #4CAF50;
+            margin-bottom: 15px;
+            border-bottom: 1px solid #555;
+            padding-bottom: 10px;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .info-item {
+            background: rgba(70, 70, 70, 0.5);
+            padding: 15px;
+            border-radius: 8px;
+        }
+
+        .info-label {
+            color: #888;
+            font-size: 0.9em;
+            margin-bottom: 5px;
+        }
+
+        .info-value {
+            color: #fff;
+            font-size: 1.1em;
+            font-weight: bold;
+        }
+
+        .status-good { color: #4CAF50; }
+        .status-warning { color: #FFC107; }
+        .status-error { color: #F44336; }
+
+        .btn {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1em;
+            margin: 5px;
+        }
+
+        .btn:hover { background: #45a049; }
+        .btn-secondary { background: #2196F3; }
+        .btn-secondary:hover { background: #0b7dda; }
+
+        .test-channel {
+            background: rgba(70, 70, 70, 0.5);
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .test-result {
+            background: rgba(0, 0, 0, 0.5);
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 10px;
+            font-family: monospace;
+            font-size: 0.9em;
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        pre {
+            background: rgba(0, 0, 0, 0.5);
+            padding: 15px;
+            border-radius: 8px;
+            overflow-x: auto;
+            color: #4CAF50;
+        }
+
+        .cookie-list {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .cookie-item {
+            background: rgba(70, 70, 70, 0.5);
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+            border-left: 3px solid #4CAF50;
+        }
+
+        .cookie-item.expired {
+            border-left-color: #F44336;
+            opacity: 0.6;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔧 ZEE5 Streaming - Debug Tools</h1>
+            <p><a href="/" style="color: #4CAF50;">← Back to Home</a></p>
+        </div>
+
+        <div class="section">
+            <h2>📊 Cookie Pool Status</h2>
+            <div class="info-grid">
+                <div class="info-item">
+                    <div class="info-label">Total Cookies</div>
+                    <div class="info-value">{{ cookie_status.total_cookies }}</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Valid Cookies</div>
+                    <div class="info-value status-{% if cookie_status.valid_cookies > 0 %}good{% else %}error{% endif %}">
+                        {{ cookie_status.valid_cookies }}
+                    </div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Expired Cookies</div>
+                    <div class="info-value">{{ cookie_status.expired_cookies }}</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Last Refresh</div>
+                    <div class="info-value" style="font-size: 0.9em;">
+                        {% if cookie_status.last_refresh %}
+                        {{ cookie_status.last_refresh.strftime('%H:%M:%S') }}
+                        {% else %}
+                        Never
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <button class="btn" onclick="refreshCookies()">🔄 Refresh Cookies Now</button>
+
+            <div class="cookie-list" style="margin-top: 20px;">
+                <h3 style="color: #4CAF50; margin-bottom: 10px;">Cookie Details:</h3>
+                {% for cookie in cookie_status.cookies %}
+                <div class="cookie-item {% if cookie.is_expired %}expired{% endif %}">
+                    <div><strong>Cookie #{{ cookie.index + 1 }}</strong></div>
+                    <div>Status: <span class="{% if cookie.is_valid and not cookie.is_expired %}status-good{% else %}status-error{% endif %}">
+                        {% if cookie.is_expired %}Expired{% elif cookie.is_valid %}Valid{% else %}Invalid{% endif %}
+                    </span></div>
+                    <div>Remaining: {{ cookie.remaining_seconds }}s</div>
+                    <div style="font-size: 0.8em; color: #888;">
+                        Created: {{ cookie.created_at }} | Expires: {{ cookie.expires_at }}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>🧪 Stream Testing</h2>
+            <p style="margin-bottom: 15px;">Test stream URL generation for channels</p>
+
+            {% for channel in channels %}
+            <div class="test-channel">
+                <div>
+                    <strong>{{ channel.name }}</strong>
+                    <span style="color: #888; margin-left: 10px;">{{ channel.language.upper() }} • {{ channel.genre }}</span>
+                </div>
+                <div>
+                    <button class="btn btn-secondary" onclick="testStream('{{ channel.id }}', '{{ channel.name }}')">
+                        🧪 Test Stream
+                    </button>
+                </div>
+            </div>
+            {% endfor %}
+
+            <div id="testResult" class="test-result" style="display: none;"></div>
+        </div>
+
+        <div class="section">
+            <h2>🔗 API Endpoints</h2>
+            <pre>
+GET  /health              - Health check
+GET  /cookie/status       - Cookie pool status
+POST /cookie/refresh      - Manual cookie refresh
+GET  /channels            - List all channels
+GET  /stream?id={id}      - Get stream (redirect)
+GET  /get-stream-url?id={id} - Get stream URL (JSON)
+GET  /playlist.m3u        - M3U8 playlist
+GET  /channels/stats      - Channel statistics
+            </pre>
+        </div>
+    </div>
+
+    <script>
+        async function refreshCookies() {
+            const result = document.getElementById('testResult');
+            result.style.display = 'block';
+            result.textContent = 'Refreshing cookies...';
+
+            try {
+                const response = await fetch('/cookie/refresh', { method: 'POST' });
+                const data = await response.json();
+
+                if (data.success) {
+                    result.textContent = '✓ Cookie refresh successful!\n\n' + JSON.stringify(data.status, null, 2);
+                    setTimeout(() => location.reload(), 2000);
+                } else {
+                    result.textContent = '✗ Cookie refresh failed: ' + (data.error || 'Unknown error');
+                }
+            } catch (error) {
+                result.textContent = '✗ Error: ' + error.message;
+            }
+        }
+
+        async function testStream(channelId, channelName) {
+            const result = document.getElementById('testResult');
+            result.style.display = 'block';
+            result.textContent = `Testing stream for ${channelName}...\n`;
+
+            try {
+                const response = await fetch('/get-stream-url?id=' + encodeURIComponent(channelId));
+                const data = await response.json();
+
+                if (data.success) {
+                    result.textContent = `✓ Stream URL generated successfully for ${channelName}\n\n` +
+                        `Stream URL:\n${data.stream_url}\n\n` +
+                        `Base URL:\n${data.base_url}\n\n` +
+                        `Cached: ${data.cached}\n` +
+                        `Expires in: ${data.expires_in}s`;
+                } else {
+                    result.textContent = `✗ Failed to get stream URL for ${channelName}\n\n` +
+                        `Error: ${data.error}`;
+                }
+            } catch (error) {
+                result.textContent = `✗ Error testing ${channelName}: ${error.message}`;
+            }
+        }
+    </script>
+</body>
+</html>

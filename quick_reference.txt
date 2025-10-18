@@ -1,0 +1,301 @@
+================================================================================
+ZEE5 STREAMING SERVICE - QUICK REFERENCE GUIDE
+================================================================================
+
+1. COOKIE GENERATION APPROACH
+================================================================================
+Server-Side Generation with User-Agent Based Caching
+
+Flow:
+  Guest Token (Random) → Platform Token (Scraped) → DD Token (JWT)
+  → API Call to ZEE5 → Extract hdntl Token → Cache for 12 hours
+
+Files Involved:
+  - _functions.php     (generateCookieZee5, fetchPlatformToken, etc.)
+  - stream.php         (getCookieZee5 - wrapper with cache logic)
+  - get-stream-url.php (JSON API version)
+
+Cache Strategy:
+  Location: /tmp/cookie_z5_[MD5_USER_AGENT].tmp
+  TTL: 12 hours (43000 seconds)
+  Key: MD5 hash of User-Agent header
+
+================================================================================
+
+2. PHP FILES SUMMARY
+================================================================================
+
+index.php (20 KB)
+  - Web UI with channel grid
+  - Cookie status display
+  - Search & filtering
+  - Direct streaming buttons
+  - Interaction: Shows cookie expiry from getCookieExpiry()
+
+playlist.php (3.8 KB)
+  - Generates M3U playlist
+  - Used by IPTV players (VLC, Tivimate, OTT Navigator)
+  - Returns #EXTM3U format with stream.php URLs
+  - No authentication in URL (dynamic per request)
+
+stream.php (3 KB)
+  - Stream redirect handler
+  - Receives ?id=channel_id from playlist
+  - Gets user's User-Agent
+  - Generates or retrieves cached cookie
+  - Redirects to: stream_url?hdntl=token
+
+get-stream-url.php (3 KB)
+  - AJAX endpoint for index.php
+  - Returns JSON with stream URL
+  - Includes cache status & expiry info
+  - Same auth logic as stream.php
+
+_functions.php (5.5 KB)
+  - Core authentication functions
+  - generateGuestToken() - Random UUID
+  - fetchPlatformToken() - Scrape zee5.com
+  - generateDDToken() - Device capabilities JWT
+  - fetchM3U8url() - API call to spapi.zee5.com
+  - generateCookieZee5() - Main orchestrator
+
+get-server-info.php (1.3 KB)
+  - Server configuration helper
+  - Auto-detects host, port, protocol
+  - Returns base URL for redirects
+
+debug-stream.php (5.9 KB)
+  - Debugging utility
+  - Tests all components
+  - Shows cache status
+  - Tests URL accessibility
+
+================================================================================
+
+3. AUTHENTICATION FLOW
+================================================================================
+
+Browser Request:
+  1. User visits http://localhost:5052/
+  2. index.php loads channels, checks cookie status
+  3. User clicks "Stream Now"
+  4. stream.php receives request with User-Agent: Chrome
+  5. Looks for: tmp/cookie_z5_[MD5(Chrome)].tmp
+  6. If found & fresh: Use cached cookie
+  7. If not: Generate new one via generateCookieZee5()
+  8. Append cookie to stream URL
+  9. Redirect to ZEE5 CDN with authentication
+
+IPTV Player Request (VLC/Tivimate):
+  1. Player requests http://server:5052/playlist.php
+  2. playlist.php returns M3U with ~90 entries
+  3. Each entry: http://server:5052/stream.php?id=0-9-zeetamil
+  4. Player requests stream.php with User-Agent: VLC
+  5. stream.php looks for: tmp/cookie_z5_[MD5(VLC)].tmp
+  6. NOT FOUND (Chrome cache from browser!)
+  7. Must generate new cookie (2-5 seconds)
+  8. PROBLEM: Player timeout before cookie ready!
+
+================================================================================
+
+4. WHY IT DOESN'T WORK FOR IPTV CLIENTS
+================================================================================
+
+Core Issue: User-Agent Based Cache Mismatch
+
+Problem 1 - No JavaScript Execution
+  - IPTV players don't run JavaScript
+  - Only parse M3U and make HTTP requests
+  - Can't do browser-like authentication
+
+Problem 2 - User Agent Mismatch
+  - Browser UA: Mozilla/5.0 (Windows)... Chrome/120...
+  - VLC UA: VLC/3.0.0
+  - Different UA = Different cache file = Cache miss
+
+Problem 3 - Cache Explosion
+  - Browser: 1 cache file
+  - VLC on Desktop: 1 different cache file
+  - Phone Chrome: 1 different cache file
+  - Tablet Safari: 1 different cache file
+  - = 4 separate authentication tokens needed
+
+Problem 4 - Timing Issues
+  - generateCookieZee5() takes 2-5 seconds
+  - IPTV players timeout in 10 seconds
+  - On first channel: Cache miss + slow generation = timeout
+  - On second channel: Cache hit + fast return = works
+
+Problem 5 - No Client-Side Cookie Storage
+  - IPTV players don't maintain cookies
+  - Can't use Set-Cookie headers
+  - Auth must be in URL query parameter
+  - Every request needs complete auth in URL
+
+================================================================================
+
+5. CURRENT ARCHITECTURE
+================================================================================
+
+          External ZEE5 CDN (India Only)
+          https://z5ak-cmaflive.zee5.com/...
+                        ↓
+          Authentication Layer (_functions.php)
+          - Guest Token
+          - Platform Token
+          - DD Token
+          - Extract hdntl Token
+                        ↓
+          PHP Application Layer
+          ┌─────────────────────────┐
+          │ index.php  playlist.php  │
+          │ stream.php  get-stream-url.php
+          └─────────────────────────┘
+                        ↓
+          Caching Layer (tmp/)
+          cookie_z5_[MD5_UA].tmp (12h TTL)
+                        ↓
+          Clients
+          ┌─────────────────────────────────┐
+          │ Browser  VLC  Tivimate  OTT Nav │
+          └─────────────────────────────────┘
+
+================================================================================
+
+6. KEY FINDINGS
+================================================================================
+
+What Works:
+  ✓ Server-side token generation (no client setup needed)
+  ✓ 12-hour caching reduces API calls
+  ✓ Supports ~90 ZEE5 channels
+  ✓ Docker deployment ready
+  ✓ Web UI for browsers
+
+What Doesn't Work Well:
+  ✗ IPTV player first-channel timeout
+  ✗ Per-user-agent cache fragmentation
+  ✗ No per-user rate limiting
+  ✗ All auth from server IP (geo-blocking)
+  ✗ User agent string volatility
+
+Critical Paths:
+  _functions.php   → This is the authentication engine
+  stream.php       → This is where cache decision happens
+  playlist.php     → This is what IPTV players consume
+
+Cache Bottleneck:
+  getCookieZee5($userAgent)
+  {
+    $UAhash = md5($userAgent);  // Different UA = Different file
+    $cacheFile = "tmp/cookie_z5_$UAhash.tmp";
+    // This is the problem: user agent based cache
+  }
+
+================================================================================
+
+7. DATA FLOW FOR IPTV PLAYER
+================================================================================
+
+Step 1: User adds playlist
+  VLC → ADD PLAYLIST → http://192.168.1.10:5052/playlist.php
+
+Step 2: Server generates M3U
+  playlist.php reads data.json
+  For each of 90 channels:
+    Outputs: #EXTINF:-1 ... tvg-name="Zee Tamil HD"
+             http://192.168.1.10:5052/stream.php?id=0-9-zeetamil
+
+Step 3: VLC parses M3U and requests first channel
+  VLC → GET /stream.php?id=0-9-zeetamil
+  Headers: User-Agent: VLC/3.0.0
+
+Step 4: stream.php processes request
+  $id = "0-9-zeetamil"
+  $userAgent = "VLC/3.0.0"
+  $cookie = getCookieZee5($userAgent)  // Looks for cache
+  if (cache NOT found) {
+    generateCookieZee5($userAgent)      // Takes 2-5 seconds!
+    VLC timeout while waiting
+  }
+
+Step 5: If server responds in time
+  stream.php returns: https://zee5.com/...?hdntl=token
+  VLC streams successfully
+  Cookie cached for next request
+
+Step 6: Subsequent requests faster
+  Cache hit → Immediate response
+  VLC plays smoothly
+
+================================================================================
+
+8. AUTHENTICATION LAYERS
+================================================================================
+
+Layer 1: Token Generation (On-Demand)
+  - External API calls to ZEE5
+  - Requires Indian IP or VPN
+  - Takes 2-5 seconds
+
+Layer 2: URL-Based Auth
+  - Token appended as ?hdntl=...
+  - Not HTTP Set-Cookie
+  - IPTV-friendly
+
+Layer 3: User-Agent Detection
+  - Each unique UA gets separate cache
+  - Can cause cache misses
+  - Main bottleneck
+
+Layer 4: ZEE5 Server Validation
+  - External CDN validates token
+  - Geo-IP checks (India only)
+  - Token expiry enforcement
+
+================================================================================
+
+9. ENVIRONMENT & CONFIGURATION
+================================================================================
+
+From .env:
+  SERVER_HOST=192.168.1.16
+  SERVER_PORT=5052
+
+From get-server-info.php:
+  - Reads SERVER_HOST, SERVER_PORT env vars
+  - Falls back to HTTP_HOST header
+  - Detects protocol (HTTP/HTTPS)
+  - Handles X-Forwarded headers
+
+Base URL Construction:
+  protocol://host:port
+  - Omits port if 80 or 443
+  - Supports reverse proxies
+
+================================================================================
+
+10. CRITICAL CODE SECTIONS
+================================================================================
+
+Cache Lookup (stream.php, lines 18-44):
+  $UAhash = md5($userAgent);
+  $cacheFile = "tmp/cookie_z5_$UAhash.tmp";
+  if (file_exists($cacheFile) && (time() - filemtime($cacheFile) < 43000)) {
+      return file_get_contents($cacheFile);  // Cache hit!
+  }
+  // Cache miss → must generate new token
+
+Cookie Generation (_functions.php, lines 115-138):
+  1. fetchPlatformToken()  // Scrape zee5.com
+  2. generateDDToken()     // Create JWT
+  3. fetchM3U8url()        // Call API
+  4. Extract hdntl from response
+  5. Return token
+
+M3U Generation (playlist.php, lines 50-71):
+  For each channel in data.json:
+    echo "#EXTINF:-1 tvg-name=\"{$channelName}\" ...\n";
+    echo "{$scriptUrl}?id=" . urlencode($channelId) . "\n";
+
+================================================================================

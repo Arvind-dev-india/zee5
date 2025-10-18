@@ -75,26 +75,35 @@ if (!$cookie) {
     die('Unable to generate authentication cookie. The service may be temporarily unavailable or geo-blocked.');
 }
 
-// Clean up the URL format to avoid VLC issues
-$finalUrl = $initialUrl . '?' . $cookie;
+// Build the CDN URL with authentication
+$cdnUrl = $initialUrl . '?' . $cookie;
 
-// For VLC and other players, return the URL directly or redirect
+// Load server info to build proxy URL
+include_once 'get-server-info.php';
+$serverInfo = getServerInfo();
+$proxyUrl = $serverInfo['base_url'] . '/proxy.php';
+
+// Encode the CDN URL for proxy
+$encodedUrl = base64_encode($cdnUrl);
+$proxiedUrl = $proxyUrl . '?url=' . urlencode($encodedUrl) . '&type=master';
+
+// For VLC and other players, return the proxied URL
 $acceptHeader = $_SERVER['HTTP_ACCEPT'] ?? '';
 $userAgentLower = strtolower($userAgent);
 
-// If it's a media player or API request, return URL as text
-if (strpos($userAgentLower, 'vlc') !== false || 
+// If it's a media player or API request, return proxied URL as text
+if (strpos($userAgentLower, 'vlc') !== false ||
     strpos($userAgentLower, 'mplayer') !== false ||
     strpos($acceptHeader, 'application/json') !== false ||
     isset($_GET['format']) && $_GET['format'] === 'url') {
-    
+
     header('Content-Type: text/plain');
-    echo $finalUrl;
+    echo $proxiedUrl;
     exit;
 }
 
-// For browsers, redirect to the streaming URL
-header("Location: " . $finalUrl, true, 302);
+// For browsers, redirect to the proxied URL
+header("Location: " . $proxiedUrl, true, 302);
 exit;
 
 //@yuvraj824

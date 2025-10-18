@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ZEE5 Streaming Server - Channel List</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            color: #333;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .header .subtitle {
+            color: #666;
+            font-size: 1.1em;
+        }
+
+        .server-info {
+            background: #e3f2fd;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+            text-align: center;
+            border-left: 5px solid #2196f3;
+        }
+
+        .cookie-status {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 30px;
+            border-left: 5px solid #28a745;
+        }
+
+        .cookie-status.warning {
+            border-left-color: #ffc107;
+            background: #fff9e6;
+        }
+
+        .cookie-status.error {
+            border-left-color: #dc3545;
+            background: #fff5f5;
+        }
+
+        .cookie-status h3 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .playlist-links {
+            background: #e9ecef;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .playlist-links h3 {
+            color: #333;
+            margin-bottom: 15px;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 12px 25px;
+            margin: 5px;
+            text-decoration: none;
+            border-radius: 25px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+        }
+
+        .btn-primary {
+            background: #007bff;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #0056b3;
+            transform: translateY(-2px);
+        }
+
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #1e7e34;
+            transform: translateY(-2px);
+        }
+
+        .channels-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .channel-card {
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease;
+            border: 1px solid #e9ecef;
+        }
+
+        .channel-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+        }
+
+        .channel-header {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            padding: 15px;
+            text-align: center;
+        }
+
+        .channel-header h4 {
+            font-size: 1.1em;
+            margin-bottom: 5px;
+        }
+
+        .channel-info {
+            padding: 15px;
+        }
+
+        .channel-meta {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 15px;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .channel-actions {
+            text-align: center;
+        }
+
+        .btn-sm {
+            padding: 8px 15px;
+            font-size: 0.9em;
+            margin: 2px;
+        }
+
+        .stats {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 30px;
+            text-align: center;
+            flex-wrap: wrap;
+        }
+
+        .stat-item {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            min-width: 150px;
+            margin: 5px;
+        }
+
+        .stat-number {
+            font-size: 2em;
+            font-weight: bold;
+            color: #007bff;
+        }
+
+        .stat-label {
+            color: #666;
+            font-size: 0.9em;
+        }
+
+        .copy-btn {
+            background: #6c757d;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 15px;
+            cursor: pointer;
+            font-size: 0.8em;
+            margin-left: 10px;
+        }
+
+        .copy-btn:hover {
+            background: #5a6268;
+        }
+
+        .url-display {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 5px;
+            font-family: monospace;
+            word-break: break-all;
+            font-size: 0.9em;
+            border: 1px solid #e9ecef;
+        }
+
+        @media (max-width: 768px) {
+            .channels-grid {
+                grid-template-columns: 1fr;
+            }
+            .stats {
+                flex-direction: column;
+                gap: 15px;
+            }
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            z-index: 1000;
+        }
+
+        .modal-content {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            max-width: 90%;
+            width: 500px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎬 ZEE5 Streaming Server</h1>
+            <p class="subtitle">Python FastAPI • IPTV Ready • {{ total_channels }} Channels</p>
+            <p style="margin-top: 10px; font-size: 0.9em;">
+                <a href="/debug" style="color: #007bff;">🔧 Debug Tools</a> |
+                <a href="/health" style="color: #007bff;">📊 Health Check</a>
+            </p>
+        </div>
+
+        <div class="server-info">
+            <h3>🌐 Server Configuration</h3>
+            <p><strong>Base URL:</strong> {{ base_url }}</p>
+            <p><strong>Network Access:</strong> Replace localhost with your server IP for network access</p>
+        </div>
+
+        <div class="cookie-status {% if cookie_status.valid_cookies == 0 %}error{% elif cookie_status.valid_cookies < 2 %}warning{% endif %}">
+            <h3>🔐 Cookie Pool Status</h3>
+            <p><strong>Valid Cookies:</strong> {{ cookie_status.valid_cookies }} / {{ cookie_status.total_cookies }}</p>
+            {% if cookie_status.next_refresh %}
+            <p><strong>Next Refresh:</strong> {{ cookie_status.next_refresh.strftime('%Y-%m-%d %H:%M:%S') }}</p>
+            {% endif %}
+        </div>
+
+        <div class="stats">
+            <div class="stat-item">
+                <div class="stat-number">{{ total_channels }}</div>
+                <div class="stat-label">Total Channels</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number">HD</div>
+                <div class="stat-label">Quality</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number">24/7</div>
+                <div class="stat-label">Available</div>
+            </div>
+        </div>
+
+        <div class="playlist-links">
+            <h3>📺 IPTV Playlist Links</h3>
+            <a href="{{ base_url }}/playlist.m3u" class="btn btn-primary" target="_blank">🔗 Open M3U Playlist</a>
+            <button class="copy-btn" onclick="copyToClipboard('{{ base_url }}/playlist.m3u')">📋 Copy URL</button>
+            <div class="url-display" style="margin-top: 15px;">
+                {{ base_url }}/playlist.m3u
+            </div>
+            <p style="margin-top: 10px; color: #666; font-size: 0.9em;">
+                Use this URL in VLC, Tivimate, OTT Navigator, or any IPTV player
+            </p>
+        </div>
+
+        <h2 style="text-align: center; margin-bottom: 20px; color: #333;">Available Channels</h2>
+
+        <div class="channels-grid">
+            {% for channel in channels %}
+            <div class="channel-card">
+                <div class="channel-header">
+                    <h4>{{ channel.name }}</h4>
+                    <small>CH {{ channel.chno }}</small>
+                </div>
+                <div class="channel-info">
+                    <div class="channel-meta">
+                        <span><strong>Language:</strong> {{ channel.language.upper() }}</span>
+                        <span><strong>Genre:</strong> {{ channel.genre }}</span>
+                    </div>
+                    <div class="channel-actions">
+                        <a href="{{ base_url }}/stream?id={{ channel.id }}"
+                           class="btn btn-primary btn-sm" target="_blank">
+                            🎬 Stream Now
+                        </a>
+                        <button class="btn btn-success btn-sm"
+                                onclick="showM3U8('{{ channel.name }}', '{{ channel.id }}')">
+                            📱 Get M3U8
+                        </button>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <div style="text-align: center; margin-top: 40px; padding-top: 20px; border-top: 2px solid #e9ecef; color: #666;">
+            <p>🎯 For Educational Purposes Only • ❤️ Open Source • 🌟 Free Forever</p>
+            <p style="margin-top: 10px;">
+                <strong>Python FastAPI Version 2.0</strong> • Powered by Playwright & Redis
+            </p>
+        </div>
+    </div>
+
+    <!-- Modal for M3U8 URL Display -->
+    <div id="m3u8Modal" class="modal">
+        <div class="modal-content">
+            <h3 style="margin-bottom: 20px; color: #333;" id="modalTitle">M3U8 Stream URL</h3>
+            <div class="url-display" id="modalUrl" style="margin-bottom: 20px;"></div>
+            <div style="text-align: center;">
+                <button class="btn btn-primary" onclick="copyModalUrl()">📋 Copy URL</button>
+                <button class="btn btn-success" onclick="openInVLC()">🎬 Open in VLC</button>
+                <button class="btn" style="background: #6c757d; color: white;" onclick="closeModal()">❌ Close</button>
+            </div>
+            <p style="margin-top: 15px; color: #666; font-size: 0.9em; text-align: center;">
+                📡 <strong>For VLC:</strong> Copy the URL above and paste in VLC → Media → Open Network Stream
+            </p>
+        </div>
+    </div>
+
+    <script>
+        let currentM3U8Url = '';
+
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(function() {
+                alert('URL copied to clipboard!');
+            });
+        }
+
+        function showM3U8(channelName, channelId) {
+            document.getElementById('modalTitle').textContent = channelName + ' - Loading...';
+            document.getElementById('modalUrl').textContent = 'Generating stream URL, please wait...';
+            document.getElementById('m3u8Modal').style.display = 'block';
+
+            fetch('/get-stream-url?id=' + encodeURIComponent(channelId))
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        currentM3U8Url = data.stream_url;
+                        document.getElementById('modalTitle').textContent = channelName + ' - M3U8 URL';
+                        document.getElementById('modalUrl').textContent = data.stream_url;
+                    } else {
+                        document.getElementById('modalTitle').textContent = channelName + ' - Error';
+                        document.getElementById('modalUrl').textContent = 'Error: ' + (data.error || 'Unknown error');
+                        currentM3U8Url = '';
+                    }
+                })
+                .catch(error => {
+                    document.getElementById('modalTitle').textContent = channelName + ' - Error';
+                    document.getElementById('modalUrl').textContent = 'Network error: ' + error.message;
+                    currentM3U8Url = '';
+                });
+        }
+
+        function copyModalUrl() {
+            copyToClipboard(currentM3U8Url);
+        }
+
+        function openInVLC() {
+            window.open('vlc://' + currentM3U8Url);
+        }
+
+        function closeModal() {
+            document.getElementById('m3u8Modal').style.display = 'none';
+        }
+
+        document.getElementById('m3u8Modal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeModal();
+            }
+        });
+    </script>
+</body>
+</html>
